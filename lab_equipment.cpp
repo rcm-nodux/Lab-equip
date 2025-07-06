@@ -89,10 +89,27 @@ void saveRequests(const std::vector<RepairRequest>& requests) {
 
 void syncDeviceStatus(std::vector<Device>& devices, const std::vector<RepairRequest>& requests) {
     for (auto& d : devices) {
-        auto it = std::find_if(requests.begin(), requests.end(), [&](const RepairRequest& r) {
-            return r.deviceId == d.id && (r.status == "В ремонте" || r.status == "На рассмотрении");
-        });
-        d.status = (it != requests.end()) ? "В ремонте" : "Исправен";
+        bool inRepair = false;
+        bool notRepairable = false;
+
+        for (const auto& r : requests) {
+            if (r.deviceId == d.id) {
+                if (r.status == "Ремонту не подлежит") {
+                    notRepairable = true;
+                    break;
+                }
+                if (r.status == "В ремонте" || r.status == "На рассмотрении") {
+                    inRepair = true;
+                }
+            }
+        }
+
+        if (notRepairable)
+            d.status = "Ремонту не подлежит";
+        else if (inRepair)
+            d.status = "В ремонте";
+        else
+            d.status = "Исправен";
     }
 }
 
@@ -345,13 +362,14 @@ void listRequests(const std::vector<RepairRequest>& requests) {
         return;
     }
 
-    std::cout << "\nID | Дата | Название | Прибор ID | Статус | Конец | Комментарий\n";
+    std::cout << "\nID | Дата | Название | Прибор ID | Статус | Описание | Конец | Комментарий\n";
     for (const auto& r : requests) {
         std::cout << r.requestId << " | "
                   << r.date << " | "
                   << r.name << " | "
                   << r.deviceId << " | "
                   << r.status << " | "
+                  << r.description << " | "
                   << r.endDate << " | "
                   << r.comment << "\n";
     }
